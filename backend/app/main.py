@@ -37,7 +37,8 @@ def get_items(search: str = None, db: Session = Depends(get_db)):
         # Return structured data
         return [
             {
-                "id": p.id, 
+                "id": p.id,
+                "sku": p.sku,
                 "name": p.name, 
                 "quantity": p.quantity_in_stock, 
                 "price": float(p.price)
@@ -84,7 +85,13 @@ def create_item(payload: dict, db: Session = Depends(get_db)):
         db.add(new_product)
         db.commit()
         db.refresh(new_product)
-        return {"id": new_product.id, "name": new_product.name, "quantity": new_product.quantity_in_stock, "price": float(new_product.price)}
+        return {
+                "id": new_product.id,
+                "sku": new_product.sku,
+                "name": new_product.name, 
+                "quantity": new_product.quantity_in_stock, 
+                "price": float(new_product.price)
+                }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to add product to database.")
@@ -111,7 +118,7 @@ def update_item(item_id: int, payload: dict, db: Session = Depends(get_db)):
         # 3. Commit the transaction
         db.commit()
         db.refresh(product)
-        return {"id": product.id, "name": product.name, "quantity": product.quantity_in_stock, "price": float(product.price)}
+        return {"id": product.id,"sku": product.sku, "name": product.name, "quantity": product.quantity_in_stock, "price": float(product.price)}
         
     except ValueError:
         db.rollback()

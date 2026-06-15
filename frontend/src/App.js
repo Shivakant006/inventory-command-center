@@ -13,6 +13,17 @@ function App() {
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
 
+    useEffect(() => {
+      // Skip the debounce on the very first render if searchTerm is empty
+      if (searchTerm === '' && items.length === 0) return; 
+
+      const delayDebounceFn = setTimeout(() => {
+        fetchItems(searchTerm);
+      }, 300);
+
+      return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
+
   // Fetch Items (Handles both full list and search queries)
   const fetchItems = async (query = '') => {
     try {
@@ -50,6 +61,10 @@ function App() {
       }
     } catch (err) { alert(err.message); }
   };
+
+  // Low Stocks
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const displayedItems = showLowStockOnly ? items.filter(i => i.quantity < 5) : items;
 
   // Adjust Stock (+ / -)
   const handleAdjustStock = async (itemId, val) => {
@@ -175,12 +190,10 @@ function App() {
       <div style={{ marginBottom: '20px', display: 'flex', gap: '15px' }}>
         <input 
           type="text" 
-          placeholder="🔍 Search products by name..." 
+          placeholder="Search products by name..." 
           value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            fetchItems(e.target.value);
-          }}
+          // 2. UPDATE THIS ONCHANGE LINE HERE:
+          onChange={(e) => setSearchTerm(e.target.value)} 
           style={{ padding: '12px', flex: 1, borderRadius: '8px', border: '1px solid #bdc3c7', fontSize: '1rem' }} 
         />
         <button 
@@ -193,18 +206,25 @@ function App() {
           🔄 Reset View
         </button>
       </div>
-
+      {error && (
+        <div style={{ padding: '15px', background: '#fadbd8', color: '#c0392b', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold' }}>
+          ⚠️ Error: {error}
+        </div>
+      )}
       {/* Data Table Section */}
       <div style={{ background: '#fff', borderRadius: '12px', padding: '10px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            {['SKU', 'Name', 'Price', 'Qty Control', 'Total Value', 'Status', 'Actions'].map(h => <th key={h} style={{ padding: '15px', color: '#2c3e50' }}>{h}</th>)}
-            {/* <tr style={{ background: '#f8f9fa', textAlign: 'left' }}>
-              {['SKU', 'Name', 'Price', 'Qty Control', 'Total Value', 'Status'].map(h => <th key={h} style={{ padding: '15px', color: '#2c3e50' }}>{h}</th>)}
-            </tr> */}
+            <tr style={{ background: '#f8f9fa', textAlign: 'left' }}>
+              {['SKU', 'Name', 'Price', 'Qty Control', 'Total Value', 'Status', 'Actions'].map(h => (
+                <th key={h} style={{ padding: '15px', color: '#2c3e50', textAlign: h === 'Actions' ? 'center' : 'left' }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {displayedItems.map((item) => (
               <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
                 <td style={{ padding: '15px', color: '#999' }}>SKU-{item.id}00</td>
                 <td style={{ padding: '15px', fontWeight: 'bold', color: '#2c3e50' }}>{item.name}</td>
@@ -215,7 +235,13 @@ function App() {
                     defaultValue={item.price.toFixed(2)}
                     onBlur={(e) => {
                         const newPrice = parseFloat(e.target.value);
-                        if (newPrice !== item.price && !isNaN(newPrice)) {
+                        if (isNaN(newPrice) || newPrice < 0) {
+                            alert("Price must be a valid positive number.");
+                            e.target.value = item.price.toFixed(2); // Reset field visually
+                            return;
+                        }
+
+                        if (newPrice !== item.price) {
                             handlePriceUpdate(item.id, newPrice);
                         }
                     }}
@@ -232,11 +258,7 @@ function App() {
                 </td>
                 <td style={{ padding: '15px' }}>
                   <span 
-                    onClick={() => {
-                        if(item.quantity < 5) {
-                            setItems(items.filter(i => i.quantity < 5));
-                        }
-                    }}
+                    onClick={() => setShowLowStockOnly(!showLowStockOnly)}
                     style={{ 
                         padding: '6px 12px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 'bold',
                         background: item.quantity === 0 ? '#fadbd8' : item.quantity < 5 ? '#fdebd0' : '#d4efdf',
