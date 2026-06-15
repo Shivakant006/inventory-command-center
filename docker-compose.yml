@@ -37,7 +37,7 @@ services:
     build:
       context: ./frontend
       args:
-        #  Injects the API endpoint during the Docker build stage
+        # This is to injects the API endpoint during the Docker build stage
         - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8000}
     container_name: inventory_ui
     restart: always
